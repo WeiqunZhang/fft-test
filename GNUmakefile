@@ -4,10 +4,15 @@ FFTW_HOME ?= NOT_SET
 DEBUG = FALSE
 DIM = 3
 COMP = gcc
-TINY_PPROFILE = TRUE
+TINY_PROFILE = TRUE
 USE_MPI = TRUE
-USE_CUDA = FALSE
-USE_FFTW = TRUE
+USE_CUDA = TRUE
+
+ifeq ($(USE_CUDA),TRUE)
+  USE_FFTW = FALSE
+else
+  USE_FFTW = TRUE
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 include $(AMREX_HOME)/Src/Base/Make.package
@@ -20,7 +25,11 @@ ifneq ($(FFTW_HOME),NOT_SET)
 endif
 
 ifeq ($(USE_FFTW),TRUE)
-  DEFINES += -DUSE_FFTW
+  libraries += -lfftw3_mpi -lfftw3
+endif
+
+ifeq ($(USE_CUDA),TRUE)
+  libraries += -lcufft
 endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
