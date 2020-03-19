@@ -8,6 +8,7 @@
 #include <cufft.h>
 #else
 #include <fftw3.h>
+#include <fftw3-mpi.h>
 #endif
 
 using namespace amrex;
@@ -34,6 +35,10 @@ std::string cufftErrorToString (const cufftResult& err)
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv); {
+
+#ifdef USE_FFTW
+    fftw_mpi_init();
+#endif
 
     BL_PROFILE("main");
 
@@ -180,6 +185,10 @@ int main (int argc, char* argv[])
         fftw_destroy_plan(backward_plan[i]);
 #endif
     }
+
+#ifdef USE_FFTW
+    fftw_mpi_cleanup();
+#endif
 
     } amrex::Finalize();
 }

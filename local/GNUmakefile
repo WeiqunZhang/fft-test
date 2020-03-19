@@ -1,4 +1,4 @@
-AMREX_HOME ?= ../amrex
+AMREX_HOME ?= ../../amrex
 FFTW_HOME ?= NOT_SET
 
 DEBUG = FALSE
@@ -25,6 +25,7 @@ ifneq ($(FFTW_HOME),NOT_SET)
 endif
 
 ifeq ($(USE_FFTW),TRUE)
+  DEFINES += -DUSE_FFTW
   libraries += -lfftw3_mpi -lfftw3
 endif
 
