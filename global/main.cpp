@@ -77,10 +77,16 @@ int main (int argc, char* argv[])
     }
     MultiFab real_field(real_ba,dm,1,0,MFInfo().SetAlloc(false));
 
+#ifdef AMREX_USE_GPU
+    auto memory_type = HEFFTE_MEM_GPU;
+#else
+    auto memory_type = HEFFTE_MEM_CPU;
+#endif
+
     std::unique_ptr<FFT3d<Real> > forward_fft(new FFT3d<Real>(ParallelDescriptor::Communicator()));
     std::unique_ptr<FFT3d<Real> > backward_fft(new FFT3d<Real>(ParallelDescriptor::Communicator()));
-    forward_fft->mem_type = HEFFTE_MEM_GPU;
-    backward_fft->mem_type = HEFFTE_MEM_GPU;
+    forward_fft->mem_type = memory_type;
+    backward_fft->mem_type = memory_type;
 
     Box global_domain = amrex::grow(geom.Domain(), nghost);
     IntVect global_N = global_domain.size();
@@ -109,8 +115,8 @@ int main (int argc, char* argv[])
     Real* dwork_real;
     Real* dwork_spectral;
     int64_t nbytes;
-    heffte_allocate(HEFFTE_MEM_GPU, &dwork_real, workspace[0], nbytes);
-    heffte_allocate(HEFFTE_MEM_GPU, &dwork_spectral, workspace[0], nbytes);
+    heffte_allocate(memory_type, &dwork_real, workspace[0], nbytes);
+    heffte_allocate(memory_type, &dwork_spectral, workspace[0], nbytes);
 
     real_field.setFab(my_boxid, new FArrayBox(my_domain, 1, dwork_real));
     real_field.setVal(0.0); // touch the memory
@@ -137,8 +143,8 @@ int main (int argc, char* argv[])
         heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
     }
 
-    heffte_deallocate(HEFFTE_MEM_GPU, dwork_real);
-    heffte_deallocate(HEFFTE_MEM_GPU, dwork_spectral);
+    heffte_deallocate(memory_type, dwork_real);
+    heffte_deallocate(memory_type, dwork_spectral);
 
     } amrex::Finalize();
 }
