@@ -84,8 +84,8 @@ int main (int argc, char* argv[])
 
     Box global_domain = amrex::grow(geom.Domain(), nghost);
     IntVect global_N = global_domain.size();
-    IntVect local_lo = my_domain.smallEnd();
-    IntVect local_hi = my_domain.bigEnd();
+    IntVect local_lo = my_domain.smallEnd() + IntVect(nghost);
+    IntVect local_hi = my_domain.bigEnd() + IntVect(nghost);
     Array<int,3> workspace; // fftsize, sendsize and recvsize
 
     heffte_plan_r2c_create(forward_fft.get(), global_N.getVect(),
@@ -103,7 +103,9 @@ int main (int argc, char* argv[])
     real_field.setVal(0.0); // touch the memory
 
     // Warming up runnings
+    real_field.ParallelCopy(orig_field, geom.periodicity());
     heffte_execute_r2c(forward_fft.get(), dwork_real, dwork_spectral);
+    heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
 
     {
         BL_PROFILE("CopyToRealField");

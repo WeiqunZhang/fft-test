@@ -125,6 +125,9 @@ int main (int argc, char* argv[])
         backward_plan.push_back(bplan);
     }
 
+    // warming up
+    real_field.FillBoundary(geom.periodicity());
+
     {
         BL_PROFILE("RealDataFillBoundary");
         real_field.FillBoundary(geom.periodicity());
