@@ -45,16 +45,16 @@ int main (int argc, char* argv[])
     Geometry geom;
     BoxArray ba;
     DistributionMapping dm;
-    int nghost;
+    IntVect nghost;
     {
         ParmParse pp;
-        Vector<int> n_cell;
-        int max_grid_size;
-        pp.getarr("n_cell", n_cell);
+        IntVect n_cell;
+        IntVect max_grid_size;
+        pp.get("n_cell", n_cell);
         pp.get("max_grid_size", max_grid_size);
         pp.get("nghost", nghost);
 
-        Box domain(IntVect(0),IntVect(n_cell)-IntVect(1));
+        Box domain(IntVect(0),n_cell-IntVect(1));
         RealBox rb({0.,0.,0.},{1.,1.,1.});
         Array<int,3> is_periodic{1,1,1};
         geom.define(domain, rb, CoordSys::cartesian, is_periodic);
