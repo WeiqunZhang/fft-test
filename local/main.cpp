@@ -54,7 +54,7 @@ int main (int argc, char* argv[])
         pp.get("max_grid_size", max_grid_size);
         pp.get("nghost", nghost);
 
-        Box domain(IntVect(0),IntVect(n_cell));
+        Box domain(IntVect(0),IntVect(n_cell)-IntVect(1));
         RealBox rb({0.,0.,0.},{1.,1.,1.});
         Array<int,3> is_periodic{1,1,1};
         geom.define(domain, rb, CoordSys::cartesian, is_periodic);
