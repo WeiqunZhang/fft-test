@@ -16,6 +16,6 @@ VPATH_LOCATIONS += $(HEFFTE_HOME)/include
 INCLUDE_LOCATIONS += $(HEFFTE_HOME)/include
 LIBRARY_LOCATIONS += $(HEFFTE_HOME)/lib
 
-libraries += -lheffte -lfftw3f -lfftw3
+libraries += -lheffte -lfftw3f -lfftw3 -lcufft
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules

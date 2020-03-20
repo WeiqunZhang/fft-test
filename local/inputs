@@ -1,4 +1,6 @@
-n_cell = 128 128 128
-max_grid_size = 64 64 64
+# 1 summit node
+n_cell = 384 256 128
+max_grid_size = 128 128 128
+
 nghost = 16
 
