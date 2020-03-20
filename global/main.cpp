@@ -93,6 +93,19 @@ int main (int argc, char* argv[])
                            local_lo.getVect(), local_hi.getVect(),
                            workspace.data());
 
+#if 0
+    // how to do r2c
+    heffte_plan_c2r_create(backward_fft.get(), global_N.getVect(),
+                           local_lo.getVect(), local_hi.getVect(),
+                           local_lo.getVect(), local_hi.getVect(),
+                           workspace.data());
+#else
+    heffte_plan_r2c_create(backward_fft.get(), global_N.getVect(),
+                           local_lo.getVect(), local_hi.getVect(),
+                           local_lo.getVect(), local_hi.getVect(),
+                           workspace.data());
+#endif
+
     Real* dwork_real;
     Real* dwork_spectral;
     int64_t nbytes;
@@ -105,6 +118,7 @@ int main (int argc, char* argv[])
     // Warming up runnings
     real_field.ParallelCopy(orig_field, geom.periodicity());
     heffte_execute_r2c(forward_fft.get(), dwork_real, dwork_spectral);
+//    heffte_execute_c2r(backward_fft.get(), dwork_spectral, dwork_real);
     heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
 
     {
@@ -119,6 +133,7 @@ int main (int argc, char* argv[])
 
     {
         BL_PROFILE("BackwardTransform");
+        // heffte_execute_c2r(backward_fft.get(), dwork_spectral, dwork_real);
         heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
     }
 
