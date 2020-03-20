@@ -61,10 +61,10 @@ int main (int argc, char* argv[])
             Box b = ba[i];
             for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                 if (b.smallEnd(idim) == geom.Domain().smallEnd(idim)) {
-                    b.growLo(idim,nghost);
+                    b.growLo(idim,nghost[idim]);
                 }
                 if (b.bigEnd(idim) == geom.Domain().bigEnd(idim)) {
-                    b.growHi(idim,nghost);
+                    b.growHi(idim,nghost[idim]);
                 }
             }
             bl.push_back(b);
@@ -90,8 +90,8 @@ int main (int argc, char* argv[])
 
     Box global_domain = amrex::grow(geom.Domain(), nghost);
     IntVect global_N = global_domain.size();
-    IntVect local_lo = my_domain.smallEnd() + IntVect(nghost);
-    IntVect local_hi = my_domain.bigEnd() + IntVect(nghost);
+    IntVect local_lo = my_domain.smallEnd() + nghost;
+    IntVect local_hi = my_domain.bigEnd() + nghost;
     Array<int,3> workspace; // fftsize, sendsize and recvsize
 
     heffte_plan_r2c_create(forward_fft.get(), global_N.getVect(),
