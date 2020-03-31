@@ -7,12 +7,11 @@
 #include <heffte.h>
 
 using namespace amrex;
-using namespace HEFFTE;
+//using namespace HEFFTE;
 
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc, argv); {
-    heffte_init();
 
     BL_PROFILE("main");
 
@@ -75,76 +74,46 @@ int main (int argc, char* argv[])
         }
         real_ba.define(std::move(bl));
     }
-    MultiFab real_field(real_ba,dm,1,0,MFInfo().SetAlloc(false));
+    MultiFab real_field(real_ba,dm,1,0,MFInfo().SetArena(The_Device_Arena()));
+    real_field.setVal(0.0+ParallelDescriptor::MyProc()); // touch the memory
 
-#ifdef AMREX_USE_GPU
-    auto memory_type = HEFFTE_MEM_GPU;
-#else
-    auto memory_type = HEFFTE_MEM_CPU;
-#endif
-
-    std::unique_ptr<FFT3d<Real> > forward_fft(new FFT3d<Real>(ParallelDescriptor::Communicator()));
-    std::unique_ptr<FFT3d<Real> > backward_fft(new FFT3d<Real>(ParallelDescriptor::Communicator()));
-    forward_fft->mem_type = memory_type;
-    backward_fft->mem_type = memory_type;
-
-    Box global_domain = amrex::grow(geom.Domain(), nghost);
-    IntVect global_N = global_domain.size();
-    IntVect local_lo = my_domain.smallEnd() + nghost;
-    IntVect local_hi = my_domain.bigEnd() + nghost;
-    Array<int,3> workspace; // fftsize, sendsize and recvsize
-
-    heffte_plan_r2c_create(forward_fft.get(), global_N.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           workspace.data());
-
-#if 0
-    // how to do r2c
-    heffte_plan_c2r_create(backward_fft.get(), global_N.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           workspace.data());
-#else
-    heffte_plan_r2c_create(backward_fft.get(), global_N.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           local_lo.getVect(), local_hi.getVect(),
-                           workspace.data());
-#endif
-
-    Real* dwork_real;
-    Real* dwork_spectral;
-    int64_t nbytes;
-    heffte_allocate(memory_type, &dwork_real, workspace[0], nbytes);
-    heffte_allocate(memory_type, &dwork_spectral, workspace[0], nbytes);
-
-    real_field.setFab(my_boxid, new FArrayBox(my_domain, 1, dwork_real));
-    real_field.setVal(0.0); // touch the memory
-
-    // Warming up runnings
-    real_field.ParallelCopy(orig_field, geom.periodicity());
-    heffte_execute_r2c(forward_fft.get(), dwork_real, dwork_spectral);
-//    heffte_execute_c2r(backward_fft.get(), dwork_spectral, dwork_real);
-    heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
-
-    {
-        BL_PROFILE("CopyToRealField");
-        real_field.ParallelCopy(orig_field, geom.periodicity());
+    Box r_local_box = amrex::shift(my_domain, nghost);
+    Box c_local_box = amrex::coarsen(r_local_box, IntVect(2,1,1));
+    if (c_local_box.bigEnd(0) * 2 == r_local_box.bigEnd(0)) {
+        c_local_box.setBig(0,c_local_box.bigEnd(0)-1);// to avoid overlap
+    }
+    if (my_domain.bigEnd(0) == geom.Domain().bigEnd(0) + nghost[0]) {
+        c_local_box.growHi(0,1);
     }
 
+    BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
+
+    heffte::fft3d_r2c<heffte::backend::cufft> fft
+        ({{r_local_box.smallEnd(0),r_local_box.smallEnd(1),r_local_box.smallEnd(2)},
+          {r_local_box.bigEnd(0)  ,r_local_box.bigEnd(1)  ,r_local_box.bigEnd(2)}},
+         {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
+          {c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}},
+         0, ParallelDescriptor::Communicator());
+
+    using heffte_complex = typename heffte::fft_output<Real>::type;
+    heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
+
+    fft.forward(real_field[my_boxid].dataPtr(), spectral_data);
+    fft.backward(spectral_data, real_field[my_boxid].dataPtr());
+
+    ParallelDescriptor::Barrier();
+
+    { BL_PROFILE("HEFFTE-total");
     {
         BL_PROFILE("ForwardTransform");
-        heffte_execute_r2c(forward_fft.get(), dwork_real, dwork_spectral);
+        fft.forward(real_field[my_boxid].dataPtr(), spectral_data);
     }
 
     {
         BL_PROFILE("BackwardTransform");
-        // heffte_execute_c2r(backward_fft.get(), dwork_spectral, dwork_real);
-        heffte_execute_r2c(backward_fft.get(), dwork_spectral, dwork_real);
+        fft.backward(spectral_data, real_field[my_boxid].dataPtr());
     }
-
-    heffte_deallocate(memory_type, dwork_real);
-    heffte_deallocate(memory_type, dwork_spectral);
+    }
 
     } amrex::Finalize();
 }

@@ -128,6 +128,9 @@ int main (int argc, char* argv[])
     // warming up
     real_field.FillBoundary(geom.periodicity());
 
+    ParallelDescriptor::Barrier();
+
+    { BL_PROFILE("WarpX-total");
     {
         BL_PROFILE("RealDataFillBoundary");
         real_field.FillBoundary(geom.periodicity());
@@ -155,7 +158,6 @@ int main (int argc, char* argv[])
         }
     }
 
-    
     // BackwardTransform
     {
         BL_PROFILE("BackwardTransform");
@@ -176,6 +178,7 @@ int main (int argc, char* argv[])
             fftw_execute(backward_plan[i]);
 #endif
         }
+    }
     }
 
     // destroy fft plans
