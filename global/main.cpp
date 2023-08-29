@@ -88,7 +88,11 @@ int main (int argc, char* argv[])
 
     BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
 
+#ifdef AMREX_USE_CUDA
     heffte::fft3d_r2c<heffte::backend::cufft> fft
+#else
+    heffte::fft3d_r2c<heffte::backend::fftw> fft
+#endif
         ({{r_local_box.smallEnd(0),r_local_box.smallEnd(1),r_local_box.smallEnd(2)},
           {r_local_box.bigEnd(0)  ,r_local_box.bigEnd(1)  ,r_local_box.bigEnd(2)}},
          {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
